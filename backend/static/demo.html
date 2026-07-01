@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>饭点小厨 · AI 驱动的智能菜谱推荐助手</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --primary:#FF6B35;--secondary:#F7931E;--accent:#2EC4B6;--dark:#1A1A2E;
+  --light:#FFF8F0;--gray:#F5F0EB;--text:#333;--text-light:#666;
+  --radius:16px;--shadow:0 4px 20px rgba(0,0,0,.08);
+}
+body{font-family:'-apple-system','Segoe UI','Microsoft YaHei',sans-serif;background:var(--light);color:var(--text);line-height:1.6;overflow-x:hidden}
+
+/* Hero */
+.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#FF6B35 0%,#F7931E 40%,#FFB627 100%);color:#fff;text-align:center;padding:2rem;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;
+  background:radial-gradient(circle,rgba(255,255,255,.1) 0%,transparent 60%);animation:rotate 20s linear infinite}
+@keyframes rotate{to{transform:rotate(360deg)}}
+.hero h1{font-size:4rem;font-weight:800;margin-bottom:.5rem;z-index:1;text-shadow:0 2px 10px rgba(0,0,0,.2)}
+.hero .tagline{font-size:1.4rem;opacity:.95;margin-bottom:2rem;z-index:1}
+.hero .badges{display:flex;flex-wrap:wrap;gap:.6rem;justify-content:center;margin-bottom:2.5rem;z-index:1}
+.hero .badge{background:rgba(255,255,255,.2);backdrop-filter:blur(10px);padding:.5rem 1.2rem;border-radius:30px;font-size:.85rem;border:1px solid rgba(255,255,255,.3)}
+.hero .cta{display:flex;gap:1rem;z-index:1}
+.hero .btn{background:#fff;color:var(--primary);padding:.9rem 2rem;border-radius:30px;text-decoration:none;font-weight:700;font-size:1rem;transition:transform .2s,box-shadow .2s;cursor:pointer;border:none}
+.hero .btn:hover{transform:translateY(-3px);box-shadow:0 8px 25px rgba(0,0,0,.2)}
+.hero .btn.outline{background:transparent;color:#fff;border:2px solid #fff}
+.hero .scroll-hint{position:absolute;bottom:2rem;font-size:.8rem;opacity:.7;animation:bounce 2s infinite;z-index:1}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+
+/* Section */
+.section{max-width:1200px;margin:0 auto;padding:5rem 2rem}
+.section h2{font-size:2.2rem;font-weight:800;text-align:center;margin-bottom:.5rem;color:var(--dark)}
+.section .subtitle{text-align:center;color:var(--text-light);margin-bottom:3rem;font-size:1.05rem}
+
+/* Architecture */
+.arch{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:1rem;margin-top:2rem}
+.arch-node{background:#fff;padding:1.5rem 2rem;border-radius:var(--radius);box-shadow:var(--shadow);text-align:center;min-width:140px;transition:transform .2s}
+.arch-node:hover{transform:translateY(-4px)}
+.arch-node .icon{font-size:2rem;margin-bottom:.5rem}
+.arch-node .title{font-weight:700;font-size:.95rem;margin-bottom:.2rem}
+.arch-node .desc{font-size:.75rem;color:var(--text-light)}
+.arch-arrow{font-size:1.8rem;color:var(--primary);font-weight:bold}
+
+/* Demo */
+.demo-container{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-top:1rem}
+.demo-tabs{display:flex;border-bottom:2px solid var(--gray)}
+.demo-tab{flex:1;padding:1.2rem;text-align:center;cursor:pointer;font-weight:600;color:var(--text-light);transition:all .2s;border-bottom:3px solid transparent}
+.demo-tab.active{color:var(--primary);border-bottom-color:var(--primary);background:var(--light)}
+.demo-tab .tab-icon{font-size:1.5rem;display:block;margin-bottom:.3rem}
+.demo-panel{padding:2rem;display:none}
+.demo-panel.active{display:block;animation:fadeIn .3s}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* Ingredient selector */
+.ing-categories{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1.5rem;margin-bottom:2rem}
+.ing-category h4{font-size:.9rem;color:var(--text-light);margin-bottom:.6rem;text-transform:uppercase;letter-spacing:.5px}
+.ing-chips{display:flex;flex-wrap:wrap;gap:.5rem}
+.ing-chip{padding:.4rem .9rem;border-radius:20px;border:2px solid #E0D5C8;background:#fff;cursor:pointer;font-size:.85rem;transition:all .15s;user-select:none}
+.ing-chip:hover{border-color:var(--primary)}
+.ing-chip.selected{background:var(--primary);color:#fff;border-color:var(--primary)}
+.novel-chip{padding:.4rem .9rem;border-radius:20px;border:2px dashed var(--accent);background:#E8F8F5;cursor:pointer;font-size:.85rem;color:var(--accent);user-select:none}
+.novel-chip.selected{background:var(--accent);color:#fff;border-style:solid}
+
+.demo-actions{display:flex;gap:1rem;align-items:center;margin:1.5rem 0;flex-wrap:wrap}
+.btn-primary{background:var(--primary);color:#fff;padding:.8rem 2rem;border-radius:30px;border:none;font-size:1rem;font-weight:600;cursor:pointer;transition:transform .2s}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 6px 15px rgba(255,107,53,.4)}
+.btn-primary:active{transform:translateY(0)}
+.btn-secondary{background:var(--accent);color:#fff;padding:.8rem 2rem;border-radius:30px;border:none;font-size:1rem;font-weight:600;cursor:pointer}
+.selected-display{font-size:.9rem;color:var(--text-light)}
+.selected-display strong{color:var(--primary)}
+
+/* Recipe cards */
+.recipe-results{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.5rem;margin-top:1.5rem}
+.recipe-card{background:#fff;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);transition:transform .2s,box-shadow .2s;cursor:pointer}
+.recipe-card:hover{transform:translateY(-4px);box-shadow:0 8px 30px rgba(0,0,0,.12)}
+.recipe-card img{width:100%;height:180px;object-fit:cover;background:var(--gray)}
+.recipe-card .info{padding:1rem}
+.recipe-card .name{font-size:1.1rem;font-weight:700;margin-bottom:.3rem}
+.recipe-card .desc{font-size:.85rem;color:var(--text-light);margin-bottom:.6rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.recipe-card .meta{display:flex;gap:.8rem;font-size:.75rem;color:var(--text-light)}
+.recipe-card .meta span{background:var(--gray);padding:.2rem .6rem;border-radius:10px}
+.matched{color:var(--accent);font-weight:600}
+.missing{color:#E74C3C;font-size:.8rem}
+.ai-tag{display:inline-block;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:.2rem .6rem;border-radius:10px;font-size:.7rem;margin-bottom:.5rem}
+.reason{font-size:.82rem;color:var(--primary);font-style:italic;margin-top:.5rem;padding:.5rem;background:#FFF5F0;border-radius:8px;border-left:3px solid var(--primary)}
+.loading{text-align:center;padding:3rem;color:var(--text-light)}
+.loading .spinner{display:inline-block;width:40px;height:40px;border:4px solid var(--gray);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Gallery */
+.gallery-filters{display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap;margin-bottom:2rem}
+.gallery-filter{padding:.5rem 1.2rem;border-radius:20px;border:2px solid #E0D5C8;background:#fff;cursor:pointer;font-size:.85rem;transition:all .15s}
+.gallery-filter.active{background:var(--dark);color:#fff;border-color:var(--dark)}
+.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1rem}
+.gallery-item{background:#fff;border-radius:12px;overflow:hidden;box-shadow:var(--shadow);transition:transform .2s;cursor:pointer}
+.gallery-item:hover{transform:scale(1.05)}
+.gallery-item img{width:100%;height:140px;object-fit:cover;background:var(--gray)}
+.gallery-item .g-name{padding:.6rem;font-size:.85rem;font-weight:600;text-align:center}
+.gallery-item .g-emoji{font-size:3rem;text-align:center;padding:2rem 0;background:var(--gray)}
+
+/* Features */
+.features{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:2rem;margin-top:2rem}
+.feature{background:#fff;padding:2.5rem;border-radius:var(--radius);box-shadow:var(--shadow);text-align:center;transition:transform .2s}
+.feature:hover{transform:translateY(-6px)}
+.feature .f-icon{font-size:3rem;margin-bottom:1rem}
+.feature h3{font-size:1.3rem;margin-bottom:.8rem;color:var(--dark)}
+.feature p{color:var(--text-light);font-size:.92rem;line-height:1.7}
+.feature .tech{margin-top:1rem;font-size:.78rem;color:var(--accent);font-weight:600}
+
+/* Modal */
+.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:999;padding:2rem}
+.modal-overlay.show{display:flex}
+.modal{background:#fff;border-radius:var(--radius);max-width:600px;width:100%;max-height:85vh;overflow-y:auto}
+.modal-header{padding:1.5rem;border-bottom:1px solid var(--gray);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:#fff;z-index:1}
+.modal-header h3{font-size:1.4rem}
+.modal-close{background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-light);padding:.5rem}
+.modal-body{padding:1.5rem}
+.modal-body img{width:100%;height:250px;object-fit:cover;border-radius:12px;margin-bottom:1rem;background:var(--gray)}
+.modal-body .section-label{font-weight:700;margin:1rem 0 .3rem;color:var(--dark)}
+.modal-body .ingredients-list{display:flex;flex-wrap:wrap;gap:.4rem}
+.modal-body .ing-tag{padding:.3rem .8rem;border-radius:12px;font-size:.8rem}
+.modal-body .ing-tag.have{background:#D4F1F1;color:var(--accent)}
+.modal-body .ing-tag.miss{background:#FDEAEA;color:#E74C3C}
+.modal-body .steps{counter-reset:step}
+.modal-body .step{display:flex;gap:.8rem;margin-bottom:.8rem;align-items:flex-start}
+.modal-body .step::before{counter-increment:step;content:counter(step);background:var(--primary);color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;flex-shrink:0;margin-top:2px}
+
+/* Tech section */
+.tech-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;margin-top:2rem}
+.tech-item{background:#fff;padding:1.5rem;border-radius:12px;text-align:center;box-shadow:var(--shadow)}
+.tech-item .t-icon{font-size:2rem;margin-bottom:.5rem}
+.tech-item .t-name{font-weight:700;font-size:.9rem}
+.tech-item .t-desc{font-size:.75rem;color:var(--text-light);margin-top:.3rem}
+
+/* TRAE journey */
+.journey{position:relative;padding-left:2rem;margin-top:2rem}
+.journey::before{content:'';position:absolute;left:8px;top:0;bottom:0;width:2px;background:linear-gradient(to bottom,var(--primary),var(--accent))}
+.journey-item{position:relative;margin-bottom:2rem;padding-bottom:.5rem}
+.journey-item::before{content:'';position:absolute;left:-30px;top:4px;width:16px;height:16px;border-radius:50%;background:var(--primary);border:3px solid #fff;box-shadow:0 0 0 2px var(--primary)}
+.journey-item h4{font-size:1.1rem;margin-bottom:.3rem;color:var(--dark)}
+.journey-item .date{font-size:.8rem;color:var(--accent);font-weight:600;margin-bottom:.3rem}
+.journey-item p{font-size:.9rem;color:var(--text-light)}
+
+/* Footer */
+.footer{background:var(--dark);color:rgba(255,255,255,.7);text-align:center;padding:3rem 2rem;margin-top:3rem}
+.footer h3{color:#fff;margin-bottom:.5rem}
+.footer a{color:var(--secondary);text-decoration:none}
+
+/* Responsive */
+@media(max-width:768px){
+  .hero h1{font-size:2.5rem}
+  .hero .tagline{font-size:1rem}
+  .arch{flex-direction:column}
+  .arch-arrow{transform:rotate(90deg)}
+  .section{padding:3rem 1rem}
+}
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<section class="hero">
+  <h1>🍳 饭点小厨</h1>
+  <p class="tagline">AI 驱动的智能菜谱推荐助手 · 让每一餐都有灵感</p>
+  <div class="badges">
+    <span class="badge">🚀 FastAPI</span>
+    <span class="badge">📱 uni-app H5</span>
+    <span class="badge">🧠 阿里云百炼 Qwen3.7-Plus</span>
+    <span class="badge">🎨 Pollinations.ai Flux</span>
+    <span class="badge">✨ 58 道菜谱 · AI 动态生成</span>
+  </div>
+  <div class="cta">
+    <button class="btn" onclick="document.getElementById('demo').scrollIntoView({behavior:'smooth'})">🎬 立即体验</button>
+    <button class="btn outline" onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})">了解功能</button>
+  </div>
+  <div class="scroll-hint">↓ 向下滚动探索</div>
+</section>
+
+<!-- Architecture -->
+<section class="section" id="arch">
+  <h2>🏗️ 技术架构</h2>
+  <p class="subtitle">前后端分离 · AI 赋能 · 全链路智能推荐</p>
+  <div class="arch">
+    <div class="arch-node"><div class="icon">👤</div><div class="title">用户</div><div class="desc">拍照/选食材</div></div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-node"><div class="icon">📱</div><div class="title">前端 H5</div><div class="desc">uni-app 跨端</div></div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-node"><div class="icon">⚡</div><div class="title">FastAPI</div><div class="desc">异步后端</div></div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-node"><div class="icon">🧠</div><div class="title">AI 百炼</div><div class="desc">Qwen3.7-Plus</div></div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-node"><div class="icon">🎨</div><div class="title">图片生成</div><div class="desc">Flux 模型</div></div>
+  </div>
+</section>
+
+<!-- Interactive Demo -->
+<section class="section" id="demo">
+  <h2>🎬 交互演示</h2>
+  <p class="subtitle">选择你现有的食材，体验 AI 智能推荐</p>
+  <div class="demo-container">
+    <div class="demo-tabs">
+      <div class="demo-tab active" onclick="switchTab('recommend')"><span class="tab-icon">🥘</span>智能推荐</div>
+      <div class="demo-tab" onclick="switchTab('ai-gen')"><span class="tab-icon">✨</span>AI 动态生成</div>
+      <div class="demo-tab" onclick="switchTab('gallery')"><span class="tab-icon">📖</span>菜谱库</div>
+    </div>
+
+    <!-- Tab 1: Recommend -->
+    <div class="demo-panel active" id="panel-recommend">
+      <div class="ing-categories" id="ing-categories"></div>
+      <div class="demo-actions">
+        <button class="btn-primary" onclick="recommend()">🔍 智能推荐菜谱</button>
+        <button class="btn-secondary" onclick="clearSelection()">清空选择</button>
+        <span class="selected-display">已选 <strong id="sel-count">0</strong> 种食材</span>
+      </div>
+      <div id="recommend-results"></div>
+    </div>
+
+    <!-- Tab 2: AI Generate -->
+    <div class="demo-panel" id="panel-ai-gen">
+      <div style="background:#E8F8F5;padding:1.5rem;border-radius:12px;margin-bottom:1.5rem">
+        <h4 style="color:var(--accent);margin-bottom:.5rem">✨ AI 动态菜谱生成</h4>
+        <p style="font-size:.88rem;color:var(--text-light)">当菜谱库中没有足够匹配的菜谱时，AI 会根据你的食材<span style="color:var(--accent);font-weight:600">实时生成全新菜谱</span>。试试选择一些不常见的食材：</p>
+      </div>
+      <div class="ing-chips" style="margin-bottom:1.5rem">
+        <span class="novel-chip" onclick="toggleNovel(this)">🥑 牛油果</span>
+        <span class="novel-chip" onclick="toggleNovel(this)">🌿 秋葵</span>
+        <span class="novel-chip" onclick="toggleNovel(this)">🧀 芝士</span>
+        <span class="novel-chip" onclick="toggleNovel(this)">🍛 咖喱</span>
+      </div>
+      <div class="demo-actions">
+        <button class="btn-primary" onclick="aiGenerate()" style="background:linear-gradient(135deg,#667eea,#764ba2)">✨ AI 生成菜谱</button>
+        <span class="selected-display">选择食材后点击生成</span>
+      </div>
+      <div id="ai-results"></div>
+    </div>
+
+    <!-- Tab 3: Gallery -->
+    <div class="demo-panel" id="panel-gallery">
+      <div class="gallery-filters" id="gallery-filters"></div>
+      <div class="gallery" id="gallery-grid"></div>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<section class="section" id="features" style="background:var(--gray)">
+  <h2>💡 核心功能</h2>
+  <p class="subtitle">三大 AI 能力，打造智能化烹饪体验</p>
+  <div class="features">
+    <div class="feature">
+      <div class="f-icon">📸</div>
+      <h3>AI 拍照识食材</h3>
+      <p>拍照上传冰箱食材，AI 多模态模型自动识别，免去手动输入烦恼。支持多种常见食材的同时识别，准确率高。</p>
+      <div class="tech">Qwen3.7-Plus 多模态 · 图片识别</div>
+    </div>
+    <div class="feature">
+      <div class="f-icon">🧠</div>
+      <h3>智能菜谱推荐</h3>
+      <p>基于核心食材覆盖率评分算法，结合随机扰动与候选池抽样，每次推荐都有不同组合。支持"几菜几汤"自定义需求。</p>
+      <div class="tech">评分算法 ±15 扰动 · Top N×2 候选池</div>
+    </div>
+    <div class="feature">
+      <div class="f-icon">✨</div>
+      <h3>AI 动态菜谱生成</h3>
+      <p>当菜谱库匹配不足 3 道时，AI 根据你的食材实时生成全新菜谱。10 分钟内相同组合不重复生成，1 小时后自动清理。</p>
+      <div class="tech">Qwen3.7-Plus · 10min 缓存 · 自动清理</div>
+    </div>
+  </div>
+</section>
+
+<!-- Tech Stack -->
+<section class="section" id="tech">
+  <h2>🛠️ 技术栈</h2>
+  <p class="subtitle">现代化全栈技术方案</p>
+  <div class="tech-grid">
+    <div class="tech-item"><div class="t-icon">⚡</div><div class="t-name">FastAPI</div><div class="t-desc">异步后端框架</div></div>
+    <div class="tech-item"><div class="t-icon">📱</div><div class="t-name">uni-app</div><div class="t-desc">跨端前端 H5</div></div>
+    <div class="tech-item"><div class="t-icon">🗄️</div><div class="t-name">SQLAlchemy</div><div class="t-desc">异步 ORM</div></div>
+    <div class="tech-item"><div class="t-icon">🧠</div><div class="t-name">Qwen3.7-Plus</div><div class="t-desc">阿里云百炼 AI</div></div>
+    <div class="tech-item"><div class="t-icon">🎨</div><div class="t-name">Pollinations</div><div class="t-desc">Flux 图片生成</div></div>
+    <div class="tech-item"><div class="t-icon">🔒</div><div class="t-name">JWT</div><div class="t-desc">用户认证</div></div>
+    <div class="tech-item"><div class="t-icon">📊</div><div class="t-name">Token 追踪</div><div class="t-desc">用量监控预警</div></div>
+    <div class="tech-item"><div class="t-icon">🌐</div><div class="t-name">Cloudflare</div><div class="t-desc">Tunnel 公网访问</div></div>
+  </div>
+</section>
+
+<!-- TRAE Journey -->
+<section class="section" id="journey" style="background:var(--gray)">
+  <h2>🚀 TRAE 实践过程</h2>
+  <p class="subtitle">从需求到上线的完整开发旅程</p>
+  <div class="journey">
+    <div class="journey-item">
+      <div class="date">阶段一 · 基础搭建</div>
+      <h4>项目初始化与后端框架</h4>
+      <p>使用 Trae IDE 搭建 FastAPI 异步后端，设计数据库模型（用户/食材/菜谱/推荐），完成基础 CRUD API 和 JWT 认证。</p>
+    </div>
+    <div class="journey-item">
+      <div class="date">阶段二 · AI 集成</div>
+      <h4>阿里云百炼多模态接入</h4>
+      <p>集成 Qwen3.7-Plus 多模态模型，实现拍照识别食材、AI 推荐理由润色、烹饪步骤增强。建立 Token 用量追踪与 80% 预警机制。</p>
+    </div>
+    <div class="journey-item">
+      <div class="date">阶段三 · 推荐优化</div>
+      <h4>智能推荐算法迭代</h4>
+      <p>核心食材覆盖率评分 + ±15 随机扰动 + Top N×2 候选池抽样，解决推荐结果重复问题。补充 5 道三文鱼菜谱修复推荐缺失。</p>
+    </div>
+    <div class="journey-item">
+      <div class="date">阶段四 · AI 动态生成</div>
+      <h4>混合推荐策略上线</h4>
+      <p>固定菜谱库 58 道 + AI 动态生成无限覆盖。10 分钟缓存防重复，1 小时自动清理。AI 生成菜谱标记 <code>__AI_GENERATED__</code>。</p>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer">
+  <h3>🍳 饭点小厨</h3>
+  <p>AI 驱动的智能菜谱推荐助手 · Trae AI 大赛参赛作品</p>
+  <p style="margin-top:.5rem;font-size:.85rem">FastAPI + uni-app + 阿里云百炼 Qwen3.7-Plus + Pollinations.ai Flux</p>
+</footer>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-title"></h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+// 菜谱数据
+const RECIPES = [{"id": "f29627ea-17f2-4bb9-8733-a5d1df6f23f1", "name": "番茄炒蛋", "description": "经典家常菜，酸甜可口，营养均衡", "ingredients": ["番茄", "鸡蛋", "葱花"], "steps": ["番茄切块", "鸡蛋打散", "热锅炒蛋盛出", "番茄炒软加蛋", "调味出锅"], "cooking_time": "15分钟", "servings": "2人份", "taste": "家常", "difficulty": "简单", "category": "素菜", "risk_tags": [], "image_url": "http://127.0.0.1:8000/api/v1/recipes/f29627ea-17f2-4bb9-8733-a5d1df6f23f1/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "16b61ad2-a0be-4208-a3e8-0d32336bce43", "name": "蛋炒饭", "description": "粒粒分明，香气四溢，快手主食", "ingredients": ["米饭", "鸡蛋", "葱花", "火腿肠"], "steps": ["鸡蛋打散炒熟", "加入米饭翻炒", "加入火腿丁", "调味出锅"], "cooking_time": "10分钟", "servings": "1人份", "taste": "家常", "difficulty": "简单", "category": "主食", "risk_tags": [], "image_url": "http://127.0.0.1:8000/api/v1/recipes/16b61ad2-a0be-4208-a3e8-0d32336bce43/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "20275509-896c-47bd-a26a-5b19e31993d4", "name": "番茄蛋汤", "description": "清淡鲜美，营养丰富，老少皆宜", "ingredients": ["番茄", "鸡蛋", "葱花"], "steps": ["番茄切块炒软", "加水煮沸", "淋入蛋液", "调味出锅"], "cooking_time": "10分钟", "servings": "2人份", "taste": "清淡", "difficulty": "简单", "category": "汤羹", "risk_tags": [], "image_url": "http://127.0.0.1:8000/api/v1/recipes/20275509-896c-47bd-a26a-5b19e31993d4/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "8069db84-b2d6-4bd9-ae72-4fb3a66ef0fd", "name": "鸡蛋羹", "description": "嫩滑爽口，入口即化，适合老人小孩", "ingredients": ["鸡蛋", "温水"], "steps": ["鸡蛋打散", "加入1.5倍温水", "过筛去浮沫", "盖保鲜膜蒸10分钟"], "cooking_time": "15分钟", "servings": "2人份", "taste": "清淡", "difficulty": "简单", "category": "家常菜", "risk_tags": [], "image_url": "http://127.0.0.1:8000/api/v1/recipes/8069db84-b2d6-4bd9-ae72-4fb3a66ef0fd/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "825f3594-5e97-48bf-acad-cce37c2c0936", "name": "西红柿鸡蛋面", "description": "家常美味，温暖身心，快手主食", "ingredients": ["番茄", "鸡蛋", "面条", "葱花"], "steps": ["番茄炒蛋备用", "煮面条", "加入番茄鸡蛋卤"], "cooking_time": "20分钟", "servings": "2人份", "taste": "家常", "difficulty": "简单", "category": "主食", "risk_tags": [], "image_url": "http://127.0.0.1:8000/api/v1/recipes/825f3594-5e97-48bf-acad-cce37c2c0936/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "9e1b1c71-0295-4bf1-bcdd-d67a42fd6801", "name": "青椒炒蛋", "description": "鲜香可口，下饭神器", "ingredients": ["青椒", "鸡蛋", "蒜末"], "steps": ["青椒切丝", "鸡蛋打散炒熟", "爆香蒜末", "加入青椒鸡蛋"], "cooking_time": "12分钟", "servings": "2人份", "taste": "家常", "difficulty": "简单", "category": "素菜", "risk_tags": ["微辣"], "image_url": "http://127.0.0.1:8000/api/v1/recipes/9e1b1c71-0295-4bf1-bcdd-d67a42fd6801/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "4ddfb1f4-5ec6-420e-a193-bf556ef4ef68", "name": "红烧肉", "description": "肥而不腻，入口即化，经典硬菜", "ingredients": ["五花肉", "生姜", "大葱", "冰糖"], "steps": ["五花肉切块焯水", "炒糖色", "加入肉块翻炒", "加水炖煮", "收汁出锅"], "cooking_time": "60分钟", "servings": "4人份", "taste": "重口", "difficulty": "中等", "category": "肉类", "risk_tags": ["高油", "高糖"], "image_url": "http://127.0.0.1:8000/api/v1/recipes/4ddfb1f4-5ec6-420e-a193-bf556ef4ef68/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "1e29ee0b-4e1a-4d48-beeb-ca5c2bbce0ce", "name": "清蒸鱼", "description": "鲜嫩爽滑，保留营养，清淡健康", "ingredients": ["鱼", "生姜", "大葱", "蒸鱼豉油"], "steps": ["鱼处理干净", "放姜片葱段", "蒸8-10分钟", "淋蒸鱼豉油"], "cooking_time": "15分钟", "servings": "2人份", "taste": "清淡", "difficulty": "简单", "category": "海鲜", "risk_tags": ["鱼刺"], "image_url": "http://127.0.0.1:8000/api/v1/recipes/1e29ee0b-4e1a-4d48-beeb-ca5c2bbce0ce/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "019b0895-2d54-4155-bdef-28c9cfce6d4e", "name": "宫保鸡丁", "description": "酸甜微辣，花生香脆，下饭经典", "ingredients": ["鸡肉", "花生", "干辣椒", "葱段"], "steps": ["鸡肉切丁腌制", "炸花生米", "爆香调料", "加入鸡丁翻炒"], "cooking_time": "25分钟", "servings": "3人份", "taste": "微辣", "difficulty": "中等", "category": "肉类", "risk_tags": ["微辣", "坚果"], "image_url": "http://127.0.0.1:8000/api/v1/recipes/019b0895-2d54-4155-bdef-28c9cfce6d4e/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "211d7089-a629-4246-addd-0971164e098c", "name": "土豆丝", "description": "酸辣爽口，开胃下饭，家常菜必备", "ingredients": ["土豆", "青椒", "干辣椒", "蒜末"], "steps": ["土豆切丝泡水", "爆香调料", "加入土豆丝快炒", "调味出锅"], "cooking_time": "12分钟", "servings": "2人份", "taste": "家常", "difficulty": "简单", "category": "素菜", "risk_tags": ["微辣"], "image_url": "http://127.0.0.1:8000/api/v1/recipes/211d7089-a629-4246-addd-0971164e098c/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "3834d5f9-dc10-4642-8627-54336ec4e2fc", "name": "炒青菜", "description": "翠绿爽口，简单健康，清肠解腻", "ingredients": ["青菜", "蒜末"], "steps": ["青菜洗净切段", "爆香蒜末", "加入青菜快炒", "调味出锅"], "cooking_time": "8分钟", "servings": "2人份", "taste": "清淡", "difficulty": "简单", "category": "素菜", "risk_tags": [], "image_url": "http://127.0.0.1:8000/api/v1/recipes/3834d5f9-dc10-4642-8627-54336ec4e2fc/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "d536eb0e-a468-4ced-9103-728f42b6bcb8", "name": "麻婆豆腐", "description": "麻辣鲜香，嫩滑入味，川菜经典", "ingredients": ["豆腐", "肉末", "豆瓣酱", "花椒"], "steps": ["豆腐切块焯水", "炒肉末", "加豆瓣酱", "加水炖煮", "勾芡出锅"], "cooking_time": "20分钟", "servings": "3人份", "taste": "微辣", "difficulty": "中等", "category": "豆制品", "risk_tags": ["微辣"], "image_url": "http://127.0.0.1:8000/api/v1/recipes/d536eb0e-a468-4ced-9103-728f42b6bcb8/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "289d092f-ac1c-43e1-82f0-48289f6f8e7e", "name": "糖醋排骨", "description": "酸甜适口，外酥里嫩，宴客必备", "ingredients": ["排骨", "冰糖", "醋", "生姜"], "steps": ["排骨焯水", "炒糖色", "加入排骨翻炒", "加水炖煮", "收汁"], "cooking_time": "40分钟", "servings": "4人份", "taste": "家常", "difficulty": "中等", "category": "肉类", "risk_tags": ["高糖"], "image_url": "http://127.0.0.1:8000/api/v1/recipes/289d092f-ac1c-43e1-82f0-48289f6f8e7e/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "5b24123d-f070-42af-869f-f8fef331d476", "name": "酸菜鱼", "description": "酸辣开胃，鱼肉嫩滑，经典川菜", "ingredients": ["鱼", "酸菜", "干辣椒", "花椒"], "steps": ["鱼片腌制", "炒酸菜", "加水煮沸", "滑入鱼片", "热油淋香"], "cooking_time": "30分钟", "servings": "4人份", "taste": "微辣", "difficulty": "中等", "category": "海鲜", "risk_tags": ["微辣", "鱼刺"], "image_url": "http://127.0.0.1:8000/api/v1/recipes/5b24123d-f070-42af-869f-f8fef331d476/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "468aec1c-d901-45d3-ab65-03088744a8c8", "name": "蒜蓉西兰花", "description": "清脆爽口，营养丰富，健身首选", "ingredients": ["西兰花", "蒜末"], "steps": ["西兰花切小朵焯水", "爆香蒜末", "加入西兰花翻炒", "调味出锅"], "cooking_time": "10分钟", "servings": "2人份", "taste": "清淡", "difficulty": "简单", "category": "素菜", "risk_tags": [], "image_url": "http://127.0.0.1:8000/api/v1/recipes/468aec1c-d901-45d3-ab65-03088744a8c8/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "c4b7a25f-81c7-4b1b-93ee-261005fd928d", "name": "回锅肉", "description": "肥而不腻，酱香浓郁，川菜经典", "ingredients": ["五花肉", "青椒", "蒜苗", "豆瓣酱"], "steps": ["五花肉煮熟切片", "爆香豆瓣酱", "加入肉片翻炒", "加入配菜"], "cooking_time": "20分钟", "servings": "3人份", "taste": "重口", "difficulty": "中等", "category": "肉类", "risk_tags": ["高油", "微辣"], "image_url": "http://127.0.0.1:8000/api/v1/recipes/c4b7a25f-81c7-4b1b-93ee-261005fd928d/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "303cdfec-522e-4ee7-856c-78a5e83891bc", "name": "蒜蓉虾", "description": "鲜美多汁，蒜香浓郁，宴客硬菜", "ingredients": ["虾", "蒜末", "葱花"], "steps": ["虾开背去虾线", "铺蒜末", "蒸5分钟", "淋热油"], "cooking_time": "10分钟", "servings": "3人份", "taste": "清淡", "difficulty": "简单", "category": "海鲜", "risk_tags": ["海鲜过敏"], "image_url": "http://127.0.0.1:8000/api/v1/recipes/303cdfec-522e-4ee7-856c-78a5e83891bc/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "93843df6-c7b7-4da2-a3ea-602843929ab0", "name": "炒土豆丝", "description": "酸辣脆爽，开胃下饭", "ingredients": ["土豆", "干辣椒", "醋"], "steps": ["土豆切丝泡水", "爆香辣椒", "快炒土豆丝", "淋醋调味"], "cooking_time": "10分钟", "servings": "2人份", "taste": "家常", "difficulty": "简单", "category": "素菜", "risk_tags": ["微辣"], "image_url": "http://127.0.0.1:8000/api/v1/recipes/93843df6-c7b7-4da2-a3ea-602843929ab0/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "f5f57740-83eb-4de1-bfe8-f77fe9fb0ee9", "name": "酸辣汤", "description": "酸辣开胃，暖身驱寒", "ingredients": ["豆腐", "木耳", "鸡蛋", "醋"], "steps": ["食材切好", "加水煮沸", "勾芡", "淋蛋液", "加醋调味"], "cooking_time": "15分钟", "servings": "3人份", "taste": "微辣", "difficulty": "简单", "category": "汤羹", "risk_tags": ["微辣"], "image_url": "http://127.0.0.1:8000/api/v1/recipes/f5f57740-83eb-4de1-bfe8-f77fe9fb0ee9/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "1593740c-6d80-4e89-8be4-70738fa7eeb3", "name": "鱼香肉丝", "description": "酸甜微辣，香气扑鼻，下饭神器", "ingredients": ["猪肉", "胡萝卜", "木耳", "青椒"], "steps": ["肉丝腌制", "配菜切丝", "炒肉丝", "调鱼香汁", "混合翻炒"], "cooking_time": "20分钟", "servings": "3人份", "taste": "微辣", "difficulty": "中等", "category": "肉类", "risk_tags": ["微辣"], "image_url": "http://127.0.0.1:8000/api/v1/recipes/1593740c-6d80-4e89-8be4-70738fa7eeb3/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "6246fdde-f24a-45d4-b033-1a90d3d29396", "name": "西兰花炒虾仁", "description": "营养均衡，清淡鲜美，健身餐首选", "ingredients": ["西兰花", "虾仁", "蒜末"], "steps": ["西兰花焯水", "虾仁腌制", "爆香蒜末", "混合快炒"], "cooking_time": "12分钟", "servings": "2人份", "taste": "清淡", "difficulty": "简单", "category": "海鲜", "risk_tags": ["海鲜过敏"], "image_url": "http://127.0.0.1:8000/api/v1/recipes/6246fdde-f24a-45d4-b033-1a90d3d29396/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "f7038e9c-cc14-4a33-ada9-1ff6f2936a50", "name": "肉末茄子", "description": "软烂入味，酱香浓郁，下饭必备", "ingredients": ["茄子", "肉末", "蒜末", "豆瓣酱"], "steps": ["茄子切块煎软", "炒肉末", "加调料", "加入茄子炖煮"], "cooking_time": "20分钟", "servings": "3人份", "taste": "家常", "difficulty": "中等", "category": "素菜", "risk_tags": ["高油"], "image_url": "http://127.0.0.1:8000/api/v1/recipes/f7038e9c-cc14-4a33-ada9-1ff6f2936a50/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "3470ab8c-d548-435f-8073-f84e2cbdaaa0", "name": "凉拌黄瓜", "description": "清爽可口，开胃解腻，夏日必备", "ingredients": ["黄瓜", "蒜末", "辣椒油"], "steps": ["黄瓜拍碎", "加入调料", "拌匀冷藏"], "cooking_time": "5分钟", "servings": "2人份", "taste": "清淡", "difficulty": "简单", "category": "凉菜", "risk_tags": ["微辣"], "image_url": "http://localhost:8000/api/v1/recipes/3470ab8c-d548-435f-8073-f84e2cbdaaa0/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-07-01T05:24:45.405788"}, {"id": "2938c0d0-7d62-42fa-b95f-0e534567ec4e", "name": "青椒土豆丝", "description": "爽脆可口，简单下饭", "ingredients": ["土豆", "青椒", "蒜末"], "steps": ["土豆青椒切丝", "爆香蒜末", "快炒", "调味"], "cooking_time": "10分钟", "servings": "2人份", "taste": "家常", "difficulty": "简单", "category": "素菜", "risk_tags": [], "image_url": "http://127.0.0.1:8000/api/v1/recipes/2938c0d0-7d62-42fa-b95f-0e534567ec4e/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "d0ceeabc-c024-429f-8023-273a84163ca0", "name": "蚝油生菜", "description": "翠绿鲜嫩，蚝油鲜香", "ingredients": ["生菜", "蒜末", "蚝油"], "steps": ["生菜焯水", "爆香蒜末", "加蚝油", "淋在生菜上"], "cooking_time": "8分钟", "servings": "2人份", "taste": "清淡", "difficulty": "简单", "category": "素菜", "risk_tags": [], "image_url": "http://127.0.0.1:8000/api/v1/recipes/d0ceeabc-c024-429f-8023-273a84163ca0/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "4e397d2e-a623-462f-9c2e-51cfb2818bd7", "name": "清蒸排骨", "description": "鲜嫩多汁，原汁原味，清淡健康", "ingredients": ["排骨", "生姜", "葱段"], "steps": ["排骨焯水", "放姜片葱段", "蒸30分钟", "调味"], "cooking_time": "35分钟", "servings": "3人份", "taste": "清淡", "difficulty": "简单", "category": "肉类", "risk_tags": [], "image_url": "http://127.0.0.1:8000/api/v1/recipes/4e397d2e-a623-462f-9c2e-51cfb2818bd7/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "dc9f9c70-2528-45cb-9de1-926b762e62d3", "name": "西红柿炖牛腩", "description": "软烂入味，汤浓肉香，经典硬菜", "ingredients": ["牛腩", "番茄", "胡萝卜", "生姜"], "steps": ["牛腩切块焯水", "炒香", "加水炖煮", "加入番茄胡萝卜"], "cooking_time": "90分钟", "servings": "4人份", "taste": "家常", "difficulty": "中等", "category": "肉类", "risk_tags": ["高嘌呤"], "image_url": "http://127.0.0.1:8000/api/v1/recipes/dc9f9c70-2528-45cb-9de1-926b762e62d3/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "3139c5a1-2d63-452b-abab-7a90e895abb7", "name": "凉拌番茄", "description": "酸甜可口，清爽解暑", "ingredients": ["番茄", "白糖"], "steps": ["番茄切块", "撒白糖", "静置10分钟"], "cooking_time": "10分钟", "servings": "2人份", "taste": "清淡", "difficulty": "简单", "category": "凉菜", "risk_tags": ["高糖"], "image_url": "http://127.0.0.1:8000/api/v1/recipes/3139c5a1-2d63-452b-abab-7a90e895abb7/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "ac6aedf0-0c65-4ec6-ae3c-5665172fec7f", "name": "黄瓜炒鸡蛋", "description": "清爽可口，简单健康", "ingredients": ["黄瓜", "鸡蛋", "葱花"], "steps": ["鸡蛋打散炒熟", "黄瓜切片", "混合快炒", "调味"], "cooking_time": "10分钟", "servings": "2人份", "taste": "清淡", "difficulty": "简单", "category": "素菜", "risk_tags": [], "image_url": "http://127.0.0.1:8000/api/v1/recipes/ac6aedf0-0c65-4ec6-ae3c-5665172fec7f/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "2c193804-df2f-4f64-a951-3493d4365c12", "name": "炒虾仁", "description": "鲜美嫩滑，简单快手", "ingredients": ["虾仁", "黄瓜", "胡萝卜"], "steps": ["虾仁腌制", "配菜切片", "快炒虾仁", "加入配菜"], "cooking_time": "12分钟", "servings": "2人份", "taste": "清淡", "difficulty": "简单", "category": "海鲜", "risk_tags": ["海鲜过敏"], "image_url": "http://127.0.0.1:8000/api/v1/recipes/2c193804-df2f-4f64-a951-3493d4365c12/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "afb820e0-564e-4a10-86ee-fae153caef26", "name": "青椒炒牛肉", "description": "牛肉滑嫩，青椒脆爽，下饭神器", "ingredients": ["牛肉", "青椒", "生抽", "淀粉"], "steps": ["牛肉切片加生抽淀粉腌制", "青椒切块", "大火滑炒牛肉", "加入青椒翻炒"], "cooking_time": "15分钟", "servings": "2人份", "taste": "咸鲜", "difficulty": "简单", "category": "肉类", "risk_tags": [], "image_url": "http://127.0.0.1:8000/api/v1/recipes/afb820e0-564e-4a10-86ee-fae153caef26/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "2d60e5cc-a5d1-4afe-b83b-7f59d271adfa", "name": "青椒肉丝", "description": "经典下饭菜，肉丝入味青椒脆", "ingredients": ["猪肉", "青椒", "生抽", "淀粉"], "steps": ["猪肉切丝腌制", "青椒切丝", "滑炒肉丝", "加青椒丝翻炒"], "cooking_time": "15分钟", "servings": "2人份", "taste": "咸鲜", "difficulty": "简单", "category": "肉类", "risk_tags": [], "image_url": "http://127.0.0.1:8000/api/v1/recipes/2d60e5cc-a5d1-4afe-b83b-7f59d271adfa/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "370d6372-74f5-42ce-9d99-c2d810178c6e", "name": "番茄牛腩", "description": "牛肉软烂，番茄酸甜，汤汁拌饭一绝", "ingredients": ["牛肉", "番茄", "土豆", "生姜"], "steps": ["牛肉切块焯水", "番茄切块炒出汁", "加牛肉炖煮", "放土豆炖软"], "cooking_time": "60分钟", "servings": "3人份", "taste": "酸甜", "difficulty": "中等", "category": "肉类", "risk_tags": [], "image_url": "http://127.0.0.1:8000/api/v1/recipes/370d6372-74f5-42ce-9d99-c2d810178c6e/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "72003f72-2459-4308-a2e6-18ae2113ad0d", "name": "芹菜炒牛肉", "description": "清香脆嫩，牛肉滑嫩", "ingredients": ["牛肉", "芹菜", "生抽"], "steps": ["牛肉切丝腌制", "芹菜切段", "滑炒牛肉", "加芹菜快炒"], "cooking_time": "15分钟", "servings": "2人份", "taste": "咸鲜", "difficulty": "简单", "category": "肉类", "risk_tags": [], "image_url": "http://127.0.0.1:8000/api/v1/recipes/72003f72-2459-4308-a2e6-18ae2113ad0d/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "9170736a-25d5-4410-8288-09a2549f7db0", "name": "洋葱炒牛肉", "description": "洋葱甜香，牛肉嫩滑", "ingredients": ["牛肉", "洋葱", "生抽"], "steps": ["牛肉切片腌制", "洋葱切丝", "滑炒牛肉", "加洋葱翻炒"], "cooking_time": "15分钟", "servings": "2人份", "taste": "咸鲜", "difficulty": "简单", "category": "肉类", "risk_tags": [], "image_url": "http://127.0.0.1:8000/api/v1/recipes/9170736a-25d5-4410-8288-09a2549f7db0/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "a0ab068e-24b0-4e5c-9f07-434159b1f4e7", "name": "土豆烧牛肉", "description": "牛肉软烂土豆绵软，浓香入味", "ingredients": ["牛肉", "土豆", "胡萝卜", "生抽"], "steps": ["牛肉焯水", "炒糖色", "加牛肉土豆胡萝卜炖煮", "收汁"], "cooking_time": "50分钟", "servings": "3人份", "taste": "咸鲜", "difficulty": "中等", "category": "肉类", "risk_tags": [], "image_url": "http://127.0.0.1:8000/api/v1/recipes/a0ab068e-24b0-4e5c-9f07-434159b1f4e7/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "b59fb5b3-c7b1-4791-9b6d-188e03fa0e3d", "name": "肉末豆腐", "description": "豆腐嫩滑肉末香，拌饭神器", "ingredients": ["猪肉", "豆腐", "豆瓣酱", "葱花"], "steps": ["猪肉剁末", "豆腐切块", "炒肉末", "加豆腐烧入味"], "cooking_time": "15分钟", "servings": "2人份", "taste": "咸鲜", "difficulty": "简单", "category": "豆制品", "risk_tags": [], "image_url": "http://127.0.0.1:8000/api/v1/recipes/b59fb5b3-c7b1-4791-9b6d-188e03fa0e3d/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "4b363671-f946-471a-9437-4541a3973963", "name": "番茄鸡蛋面", "description": "酸甜开胃，一碗管饱", "ingredients": ["番茄", "鸡蛋", "面条"], "steps": ["炒鸡蛋盛出", "炒番茄出汁", "加水煮面", "放鸡蛋"], "cooking_time": "15分钟", "servings": "1人份", "taste": "酸甜", "difficulty": "简单", "category": "主食", "risk_tags": [], "image_url": "http://127.0.0.1:8000/api/v1/recipes/4b363671-f946-471a-9437-4541a3973963/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "8cd857c7-cc25-42e0-8c8c-72e689c93858", "name": "黄瓜炒肉片", "description": "清爽脆嫩，快手小炒", "ingredients": ["猪肉", "黄瓜", "生抽"], "steps": ["猪肉切片腌制", "黄瓜切片", "滑炒肉片", "加黄瓜翻炒"], "cooking_time": "12分钟", "servings": "2人份", "taste": "清淡", "difficulty": "简单", "category": "肉类", "risk_tags": [], "image_url": "http://localhost:8000/api/v1/recipes/8cd857c7-cc25-42e0-8c8c-72e689c93858/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-07-01T05:25:03.788091"}, {"id": "78bb2e5a-3d02-4a94-875c-c8b557f35042", "name": "鸡蛋炒饭", "description": "粒粒分明，蛋香四溢", "ingredients": ["鸡蛋", "米饭", "葱花"], "steps": ["鸡蛋打散", "热油炒蛋", "加米饭翻炒", "撒葱花"], "cooking_time": "10分钟", "servings": "1人份", "taste": "咸鲜", "difficulty": "简单", "category": "主食", "risk_tags": [], "image_url": "http://127.0.0.1:8000/api/v1/recipes/78bb2e5a-3d02-4a94-875c-c8b557f35042/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "8f3fb0ca-5f1f-41c9-8bf4-81a2693e3755", "name": "紫菜蛋花汤", "description": "清淡鲜美，1分钟快手汤", "ingredients": ["鸡蛋", "紫菜", "葱花"], "steps": ["水烧开", "放紫菜", "淋蛋液", "撒葱花"], "cooking_time": "5分钟", "servings": "2人份", "taste": "清淡", "difficulty": "简单", "category": "汤类", "risk_tags": [], "image_url": "http://127.0.0.1:8000/api/v1/recipes/8f3fb0ca-5f1f-41c9-8bf4-81a2693e3755/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "743da96e-0d53-4e27-9488-a4186221bf41", "name": "醋溜白菜", "description": "酸爽开胃，清脆爽口", "ingredients": ["白菜", "醋", "干辣椒"], "steps": ["白菜切块", "热油爆香辣椒", "大火炒白菜", "烹醋调味"], "cooking_time": "10分钟", "servings": "2人份", "taste": "酸甜", "difficulty": "简单", "category": "蔬菜", "risk_tags": ["微辣"], "image_url": "http://127.0.0.1:8000/api/v1/recipes/743da96e-0d53-4e27-9488-a4186221bf41/image", "ai_reason": null, "is_active": true, "created_at": "2026-06-25T07:32:48.631206", "updated_at": "2026-06-26T02:20:12.952196"}, {"id": "b89137cc-189b-46e4-b0cd-e0b45eebbb07", "name": "香煎三文鱼", "description": "外焦里嫩，金黄诱人，营养丰富", "ingredients": ["三文鱼", "柠檬", "黑胡椒"], "steps": ["三文鱼擦干水分", "撒盐和黑胡椒", "热锅少油煎至金黄", "挤柠檬汁出锅"], "cooking_time": "10分钟", "servings": "2人份", "taste": "咸鲜", "difficulty": "简单", "category": "海鲜", "risk_tags": ["海鲜过敏"], "image_url": "http://127.0.0.1:8000/api/v1/recipes/b89137cc-189b-46e4-b0cd-e0b45eebbb07/image", "ai_reason": null, "is_active": true, "created_at": "2026-07-01T04:55:56.544445", "updated_at": "2026-07-01T04:55:56.544445"}, {"id": "c167bc3c-5569-4099-8f20-47d0b4fa830e", "name": "三文鱼炒饭", "description": "粒粒分明，三文鱼鲜香，营养一锅端", "ingredients": ["三文鱼", "米饭", "鸡蛋", "葱花"], "steps": ["三文鱼切丁煎香", "鸡蛋炒散", "加米饭翻炒", "放三文鱼丁调味"], "cooking_time": "15分钟", "servings": "1人份", "taste": "咸鲜", "difficulty": "简单", "category": "主食", "risk_tags": ["海鲜过敏"], "image_url": "http://127.0.0.1:8000/api/v1/recipes/c167bc3c-5569-4099-8f20-47d0b4fa830e/image", "ai_reason": null, "is_active": true, "created_at": "2026-07-01T04:55:56.544445", "updated_at": "2026-07-01T04:55:56.544445"}, {"id": "275a67c3-d05e-4366-ba16-14c717bc4d3d", "name": "蒜香三文鱼", "description": "蒜香浓郁，鱼肉嫩滑，快手硬菜", "ingredients": ["三文鱼", "蒜末", "生抽"], "steps": ["三文鱼切块", "蒜末爆香", "放入三文鱼煎炒", "淋生抽调味"], "cooking_time": "12分钟", "servings": "2人份", "taste": "咸鲜", "difficulty": "简单", "category": "海鲜", "risk_tags": ["海鲜过敏"], "image_url": "http://127.0.0.1:8000/api/v1/recipes/275a67c3-d05e-4366-ba16-14c717bc4d3d/image", "ai_reason": null, "is_active": true, "created_at": "2026-07-01T04:55:56.544445", "updated_at": "2026-07-01T04:55:56.544445"}, {"id": "b0ab49f2-ae58-4e81-9c0c-15e4e1b19129", "name": "三文鱼头豆腐汤", "description": "汤白如奶，鲜美滋补，秋冬暖身", "ingredients": ["三文鱼", "豆腐", "生姜", "葱段"], "steps": ["鱼头煎至两面金黄", "加开水大火煮", "放豆腐炖煮", "调味撒葱"], "cooking_time": "30分钟", "servings": "3人份", "taste": "清淡", "difficulty": "中等", "category": "汤类", "risk_tags": ["鱼刺"], "image_url": "http://localhost:8000/api/v1/recipes/b0ab49f2-ae58-4e81-9c0c-15e4e1b19129/image", "ai_reason": null, "is_active": true, "created_at": "2026-07-01T04:55:56.544445", "updated_at": "2026-07-01T05:24:45.405788"}, {"id": "15c29561-f068-4e91-8729-d7901a535c87", "name": "三文鱼刺身", "description": "原汁原味，鲜甜软糯，日式经典", "ingredients": ["三文鱼", "芥末", "酱油"], "steps": ["三文鱼冷冻杀菌后解冻", "逆纹切薄片", "配芥末酱油食用"], "cooking_time": "10分钟", "servings": "2人份", "taste": "清淡", "difficulty": "简单", "category": "凉菜", "risk_tags": ["生食"], "image_url": "http://127.0.0.1:8000/api/v1/recipes/15c29561-f068-4e91-8729-d7901a535c87/image", "ai_reason": null, "is_active": true, "created_at": "2026-07-01T04:55:56.544445", "updated_at": "2026-07-01T04:55:56.544445"}, {"id": "4971660d-b66b-40c5-b97d-2cdd134c7b64", "name": "可乐鸡翅", "description": "甜香入骨，嫩滑多汁，老少皆宜", "ingredients": ["鸡翅", "可乐", "生姜", "生抽"], "steps": ["鸡翅划口焯水", "煎至两面金黄", "加可乐和生抽", "收汁出锅"], "cooking_time": "25分钟", "servings": "3人份", "taste": "甜咸", "difficulty": "简单", "category": "肉类", "risk_tags": ["高糖"], "image_url": "http://127.0.0.1:8000/api/v1/recipes/4971660d-b66b-40c5-b97d-2cdd134c7b64/image", "ai_reason": null, "is_active": true, "created_at": "2026-07-01T04:55:56.544445", "updated_at": "2026-07-01T04:55:56.544445"}, {"id": "8dbd42b7-c145-41db-b9dc-ab40c4d163b6", "name": "干煸四季豆", "description": "干香入味，脆嫩爽口，下饭神器", "ingredients": ["四季豆", "肉末", "干辣椒", "蒜末"], "steps": ["四季豆摘段", "干煸至虎皮", "炒肉末", "加调料翻炒"], "cooking_time": "15分钟", "servings": "2人份", "taste": "微辣", "difficulty": "中等", "category": "素菜", "risk_tags": ["微辣"], "image_url": "http://127.0.0.1:8000/api/v1/recipes/8dbd42b7-c145-41db-b9dc-ab40c4d163b6/image", "ai_reason": null, "is_active": true, "created_at": "2026-07-01T04:55:56.544445", "updated_at": "2026-07-01T04:55:56.544445"}, {"id": "dc10b49e-3fd0-4780-9af2-fda3ede5c419", "name": "鱼香茄子", "description": "酱香浓郁，茄子软烂，川菜经典", "ingredients": ["茄子", "肉末", "豆瓣酱", "蒜末"], "steps": ["茄子切条煎软", "炒肉末出油", "加豆瓣酱", "放入茄子烧入味"], "cooking_time": "20分钟", "servings": "3人份", "taste": "微辣", "difficulty": "中等", "category": "素菜", "risk_tags": ["高油", "微辣"], "image_url": "http://127.0.0.1:8000/api/v1/recipes/dc10b49e-3fd0-4780-9af2-fda3ede5c419/image", "ai_reason": null, "is_active": true, "created_at": "2026-07-01T04:55:56.544445", "updated_at": "2026-07-01T04:55:56.544445"}, {"id": "ae6826e1-34df-4ff7-aba4-ad6a29b913df", "name": "葱爆羊肉", "description": "葱香浓郁，羊肉嫩滑，北方经典", "ingredients": ["羊肉", "大葱", "生抽"], "steps": ["羊肉切片腌制", "大葱切段", "大火爆炒羊肉", "加葱段翻炒"], "cooking_time": "12分钟", "servings": "2人份", "taste": "咸鲜", "difficulty": "简单", "category": "肉类", "risk_tags": [], "image_url": "http://127.0.0.1:8000/api/v1/recipes/ae6826e1-34df-4ff7-aba4-ad6a29b913df/image", "ai_reason": null, "is_active": true, "created_at": "2026-07-01T04:55:56.544445", "updated_at": "2026-07-01T04:55:56.544445"}, {"id": "9effc9d9-d7e4-40eb-8daa-e70bbad7e9de", "name": "虾仁豆腐", "description": "鲜嫩爽滑，高蛋白低脂，老少皆宜", "ingredients": ["虾仁", "豆腐", "葱花"], "steps": ["豆腐切块", "虾仁腌制", "烧豆腐", "放虾仁煮熟调味"], "cooking_time": "15分钟", "servings": "2人份", "taste": "清淡", "difficulty": "简单", "category": "豆制品", "risk_tags": ["海鲜过敏"], "image_url": "http://127.0.0.1:8000/api/v1/recipes/9effc9d9-d7e4-40eb-8daa-e70bbad7e9de/image", "ai_reason": null, "is_active": true, "created_at": "2026-07-01T04:55:56.544445", "updated_at": "2026-07-01T04:55:56.544445"}, {"id": "dbb18847-c855-4b0e-a8e5-a455d83b68e0", "name": "番茄龙利鱼", "description": "酸甜开胃，鱼肉嫩滑，无刺放心吃", "ingredients": ["龙利鱼", "番茄", "蒜末"], "steps": ["龙利鱼切块腌制", "番茄炒出汁", "加水煮开", "放入鱼肉煮熟"], "cooking_time": "20分钟", "servings": "2人份", "taste": "酸甜", "difficulty": "简单", "category": "海鲜", "risk_tags": [], "image_url": "http://127.0.0.1:8000/api/v1/recipes/dbb18847-c855-4b0e-a8e5-a455d83b68e0/image", "ai_reason": null, "is_active": true, "created_at": "2026-07-01T04:55:56.544445", "updated_at": "2026-07-01T04:55:56.544445"}, {"id": "be10b481-8f35-4748-a2ec-73983a1cd858", "name": "蒜薹炒肉", "description": "蒜薹脆嫩，肉丝入味，春季时令菜", "ingredients": ["猪肉", "蒜薹", "生抽"], "steps": ["猪肉切丝腌制", "蒜薹切段", "滑炒肉丝", "加蒜薹翻炒"], "cooking_time": "12分钟", "servings": "2人份", "taste": "咸鲜", "difficulty": "简单", "category": "肉类", "risk_tags": [], "image_url": "http://127.0.0.1:8000/api/v1/recipes/be10b481-8f35-4748-a2ec-73983a1cd858/image", "ai_reason": null, "is_active": true, "created_at": "2026-07-01T04:55:56.544445", "updated_at": "2026-07-01T04:55:56.544445"}, {"id": "41fc0ea8-be16-4685-8c13-3a1caaa88207", "name": "地三鲜", "description": "东北经典，土豆茄子青椒完美组合", "ingredients": ["土豆", "茄子", "青椒", "蒜末"], "steps": ["土豆茄子切块炸软", "调酱汁", "所有食材烧在一起", "收汁出锅"], "cooking_time": "20分钟", "servings": "3人份", "taste": "咸鲜", "difficulty": "中等", "category": "素菜", "risk_tags": ["高油"], "image_url": "http://127.0.0.1:8000/api/v1/recipes/41fc0ea8-be16-4685-8c13-3a1caaa88207/image", "ai_reason": null, "is_active": true, "created_at": "2026-07-01T04:55:56.544445", "updated_at": "2026-07-01T04:55:56.544445"}, {"id": "4879e048-5678-4f3a-9c0c-48f08fea4b67", "name": "木须肉", "description": "荤素搭配，木耳鸡蛋黄花菜，家常经典", "ingredients": ["猪肉", "鸡蛋", "木耳", "黄瓜"], "steps": ["鸡蛋炒散盛出", "炒肉片", "加木耳黄瓜", "放鸡蛋翻炒调味"], "cooking_time": "15分钟", "servings": "2人份", "taste": "咸鲜", "difficulty": "简单", "category": "肉类", "risk_tags": [], "image_url": "http://127.0.0.1:8000/api/v1/recipes/4879e048-5678-4f3a-9c0c-48f08fea4b67/image", "ai_reason": null, "is_active": true, "created_at": "2026-07-01T04:55:56.544445", "updated_at": "2026-07-01T04:55:56.544445"}, {"id": "f4c8c97e-841d-4a0a-90ae-c66f1ba24113", "name": "蒜蓉粉丝蒸虾", "description": "蒜香粉丝吸满鲜汁，宴客硬菜", "ingredients": ["虾", "粉丝", "蒜末", "葱花"], "steps": ["粉丝泡软铺底", "虾开背摆在粉丝上", "铺蒜末", "蒸6分钟淋油"], "cooking_time": "15分钟", "servings": "3人份", "taste": "咸鲜", "difficulty": "中等", "category": "海鲜", "risk_tags": ["海鲜过敏"], "image_url": "http://127.0.0.1:8000/api/v1/recipes/f4c8c97e-841d-4a0a-90ae-c66f1ba24113/image", "ai_reason": null, "is_active": true, "created_at": "2026-07-01T04:55:56.544445", "updated_at": "2026-07-01T04:55:56.544445"}, {"id": "ab300bd0-a4f8-4edd-a5e4-645cdd5c8d72", "name": "白切鸡", "description": "皮爽肉滑，原汁原味，粤菜经典", "ingredients": ["鸡肉", "生姜", "大葱"], "steps": ["整鸡煮20分钟", "冰水浸泡", "斩块装盘", "蘸料食用"], "cooking_time": "30分钟", "servings": "4人份", "taste": "清淡", "difficulty": "中等", "category": "肉类", "risk_tags": [], "image_url": "http://127.0.0.1:8000/api/v1/recipes/ab300bd0-a4f8-4edd-a5e4-645cdd5c8d72/image", "ai_reason": null, "is_active": true, "created_at": "2026-07-01T04:55:56.544445", "updated_at": "2026-07-01T04:55:56.544445"}];
+
+// 食材分类
+const ING_CATEGORIES = {"肉禽蛋": ["鸡蛋", "猪肉", "排骨", "牛肉", "鸡肉", "鸡翅", "羊肉", "虾仁", "虾"], "水产海鲜": ["三文鱼", "鱼", "龙利鱼", "酸菜鱼"], "蔬菜": ["番茄", "青椒", "黄瓜", "土豆", "西兰花", "生菜", "白菜", "茄子", "四季豆", "蒜薹", "芹菜", "洋葱", "紫菜", "胡萝卜", "蘑菇", "豆腐"], "主食其他": ["米饭", "面条", "粉丝", "葱", "蒜", "姜"]};
+
+// 后端地址（用于加载图片）
+const BACKEND_URL = window.location.origin;
+
+// 状态
+let selectedIngredients = new Set();
+let selectedNovel = new Set();
+
+// 初始化食材选择区
+function initIngredients() {
+  const container = document.getElementById('ing-categories');
+  container.innerHTML = '';
+  for (const [cat, ings] of Object.entries(ING_CATEGORIES)) {
+    const div = document.createElement('div');
+    div.className = 'ing-category';
+    div.innerHTML = `<h4>${cat}</h4><div class="ing-chips">${
+      ings.map(i => `<span class="ing-chip" onclick="toggleIngredient(this,'${i}')">${i}</span>`).join('')
+    }</div>`;
+    container.appendChild(div);
+  }
+}
+
+function toggleIngredient(el, ing) {
+  if (selectedIngredients.has(ing)) {
+    selectedIngredients.delete(ing);
+    el.classList.remove('selected');
+  } else {
+    selectedIngredients.add(ing);
+    el.classList.add('selected');
+  }
+  updateSelCount();
+}
+
+function toggleNovel(el) {
+  const ing = el.textContent.replace(/^[^a-zA-Z\u4e00-\u9fa5]+/, '');
+  if (selectedNovel.has(ing)) {
+    selectedNovel.delete(ing);
+    el.classList.remove('selected');
+  } else {
+    selectedNovel.add(ing);
+    el.classList.add('selected');
+  }
+}
+
+function updateSelCount() {
+  document.getElementById('sel-count').textContent = selectedIngredients.size;
+}
+
+function clearSelection() {
+  selectedIngredients.clear();
+  document.querySelectorAll('.ing-chip.selected').forEach(el => el.classList.remove('selected'));
+  updateSelCount();
+  document.getElementById('recommend-results').innerHTML = '';
+}
+
+// 核心食材判断（与后端逻辑一致）
+function isCoreIngredient(ing) {
+  const nonCore = ['葱','葱花','葱叶','葱白','蒜','蒜末','蒜片','姜','姜片','姜丝','温水','热水','凉水','盐','糖','酱油','生抽','老抽','醋','料酒','蚝油','淀粉','食用油','油','芝麻油','香油','胡椒粉','花椒粉','辣椒粉','白胡椒粉','味精','鸡精','豆瓣酱','甜面酱','番茄酱','芝麻','白芝麻'];
+  for (const nc of nonCore) {
+    if (ing.includes(nc)) return false;
+  }
+  return true;
+}
+
+function normalizeIng(ing) {
+  return ing.trim().toLowerCase();
+}
+
+// 推荐算法（简化版，与后端评分逻辑一致）
+function recommend() {
+  const ings = Array.from(selectedIngredients);
+  if (ings.length === 0) {
+    document.getElementById('recommend-results').innerHTML = '<p style="text-align:center;color:var(--text-light);padding:2rem">请先选择食材 🥬</p>';
+    return;
+  }
+
+  const normUserIngs = new Set(ings.map(normalizeIng));
+  let scored = [];
+
+  for (const recipe of RECIPES) {
+    const normRecipeIngs = (recipe.ingredients || []).map(normalizeIng);
+    const matched = normRecipeIngs.filter(i => normUserIngs.has(i));
+    const coreIngs = normRecipeIngs.filter(isCoreIngredient);
+    const missing = coreIngs.filter(i => !normUserIngs.has(i));
+    const matchedCore = coreIngs.filter(i => normUserIngs.has(i));
+
+    if (matched.length === 0) continue;
+
+    // 核心食材覆盖率评分
+    const coreRatio = coreIngs.length > 0 ? matchedCore.length / coreIngs.length : 1;
+    const totalRatio = matched.length / normRecipeIngs.length;
+    let score = coreRatio * 70 + totalRatio * 30;
+    // 随机扰动 ±15
+    score += (Math.random() - 0.5) * 30;
+
+    scored.push({recipe, score, matched, missing, matchedCore});
+  }
+
+  scored.sort((a, b) => b.score - a.score);
+
+  if (scored.length === 0) {
+    document.getElementById('recommend-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-light)"><p style="font-size:1.1rem">😕 没有找到匹配的菜谱</p><p style="margin-top:.5rem">试试选择更多食材，或使用「AI 动态生成」功能</p></div>';
+    return;
+  }
+
+  // 从 top N*2 候选池随机抽样 5 道
+  const poolSize = Math.min(scored.length, Math.max(5 * 2, 5 + 2));
+  const pool = scored.slice(0, poolSize);
+  // 随机抽样
+  const picked = [];
+  while (picked.length < Math.min(5, pool.length) && pool.length > 0) {
+    const idx = Math.floor(Math.random() * pool.length);
+    picked.push(pool.splice(idx, 1)[0]);
+  }
+
+  renderResults(picked, ings, 'recommend-results');
+}
+
+function renderResults(items, userIngs, containerId) {
+  const container = document.getElementById(containerId);
+  if (items.length === 0) {
+    container.innerHTML = '<p style="text-align:center;color:var(--text-light)">暂无结果</p>';
+    return;
+  }
+
+  container.innerHTML = '<div class="recipe-results">' + items.map(item => {
+    const r = item.recipe;
+    const matched = item.matched || [];
+    const missing = item.missing || [];
+    const isAI = r.ai_generated;
+    const imgUrl = `${BACKEND_URL}/api/v1/recipes/${r.id}/image`;
+    const reason = isAI
+      ? `AI 根据你现有的 ${matched.slice(0,3).join('、') || userIngs.slice(0,3).join('、')} 创意推荐`
+      : generateReason(r.name, matched, missing);
+
+    return `<div class="recipe-card" onclick="showDetail('${r.id}')">
+      <img src="${imgUrl}" onerror="this.style.display='none';this.parentElement.innerHTML='<div style=\'height:180px;display:flex;align-items:center;justify-content:center;font-size:3rem;background:var(--gray)\'>🍳</div>'" loading="lazy">
+      <div class="info">
+        ${isAI ? '<span class="ai-tag">✨ AI 生成</span>' : ''}
+        <div class="name">${r.name}</div>
+        <div class="desc">${r.description || ''}</div>
+        <div style="margin:.4rem 0">
+          ${matched.length > 0 ? `<span class="matched">✓ 已有: ${matched.slice(0,4).join('、')}${matched.length>4?'...':''}</span><br>` : ''}
+          ${missing.length > 0 ? `<span class="missing">还需: ${missing.slice(0,3).join('、')}${missing.length>3?'...':''}</span>` : '<span class="matched">✓ 食材齐全！</span>'}
+        </div>
+        <div class="meta">
+          <span>⏱ ${r.cooking_time || '?'}</span>
+          <span>🍽 ${r.servings || '?'}</span>
+          <span>📊 ${r.difficulty || '?'}</span>
+        </div>
+        <div class="reason">${reason}</div>
+      </div>
+    </div>`;
+  }).join('') + '</div>';
+}
+
+function generateReason(name, matched, missing) {
+  const templates = [
+    `你选了${matched.slice(0,2).join('和')}，做${name}正合适，简单又好吃`,
+    `${name}用到了你现有的${matched.slice(0,2).join('、')}，家常味道不会出错`,
+    `现有食材就能做的${name}，${missing.length === 0 ? '所有食材都齐了' : '只需再补' + missing.slice(0,2).join('、')}`,
+    `${matched.slice(0,1)[0]}是主角的${name}，搭配你现有的食材，营养又美味`,
+  ];
+  return templates[Math.floor(Math.random() * templates.length)];
+}
+
+// AI 生成模拟
+async function aiGenerate() {
+  if (selectedNovel.size === 0) {
+    document.getElementById('ai-results').innerHTML = '<p style="text-align:center;color:var(--text-light);padding:2rem">请先选择上方食材 ✨</p>';
+    return;
+  }
+
+  const ings = Array.from(selectedNovel);
+  const container = document.getElementById('ai-results');
+  container.innerHTML = `<div class="loading"><div class="spinner"></div><p style="margin-top:1rem">AI 正在根据 ${ings.join('、')} 生成创意菜谱...</p></div>`;
+
+  // 尝试调用后端 API
+  try {
+    const resp = await fetch(`${BACKEND_URL}/api/v1/recipes/recommend`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ingredients: ings, preferences: {}, mode: 'normal'})
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      const aiRecipes = data.recipes.map(r => ({
+        recipe: {
+          ...r,
+          id: r.id,
+          ingredients: r.ingredients,
+          ai_generated: r.recommendation_reason && r.recommendation_reason.includes('AI')
+        },
+        matched: r.matched_ingredients || [],
+        missing: r.missing_ingredients || []
+      }));
+      renderResults(aiRecipes, ings, 'ai-results');
+      return;
+    }
+  } catch(e) {
+    // 后端不可用，使用模拟数据
+  }
+
+  // 模拟 AI 生成
+  setTimeout(() => {
+    const mockAI = generateMockAI(ings);
+    renderResults(mockAI, ings, 'ai-results');
+  }, 1500);
+}
+
+function generateMockAI(ings) {
+  const templates = [
+    {name: `${ings[0]}创意沙拉`, desc: `清爽健康的创意沙拉，保留食材原味`, steps: ['将食材洗净切好', '调制油醋汁', '拌匀即可'], time: '10分钟', taste: '清爽', diff: '简单'},
+    {name: `${ings[0]}炒蛋`, desc: `简单快手的家常炒蛋，营养美味`, steps: ['鸡蛋打散', '热锅下油炒蛋', '加入食材翻炒调味'], time: '15分钟', taste: '咸鲜', diff: '简单'},
+    {name: `奶油${ings[0]}意面`, desc: `西式创意做法，浓郁顺滑`, steps: ['煮意面', '制作奶油酱', '加入食材拌匀'], time: '25分钟', taste: '奶香', diff: '中等'},
+  ];
+  return templates.slice(0, 3).map(t => ({
+    recipe: {
+      id: 'mock-' + Math.random().toString(36).substr(2,9),
+      name: t.name,
+      description: t.desc,
+      ingredients: [...ings, '盐', '橄榄油'],
+      cooking_time: t.time,
+      servings: '2人份',
+      taste: t.taste,
+      difficulty: t.diff,
+      category: 'AI创意',
+      ai_generated: true,
+      steps: t.steps
+    },
+    matched: ings,
+    missing: []
+  }));
+}
+
+// 菜谱详情
+function showDetail(id) {
+  const r = RECIPES.find(x => x.id === id);
+  if (!r) return;
+  const imgUrl = `${BACKEND_URL}/api/v1/recipes/${r.id}/image`;
+
+  document.getElementById('modal-title').textContent = r.name;
+  const ings = (r.ingredients || []);
+  const userIngs = Array.from(selectedIngredients);
+  document.getElementById('modal-body').innerHTML = `
+    <img src="${imgUrl}" onerror="this.style.display='none'" loading="lazy">
+    <p style="color:var(--text-light);margin-bottom:1rem">${r.description || ''}</p>
+    <div class="section-label">📋 所需食材</div>
+    <div class="ingredients-list">${ings.map(i => {
+      const have = userIngs.some(u => normalizeIng(u) === normalizeIng(i));
+      return `<span class="ing-tag ${have ? 'have' : 'miss'}">${have ? '✓' : '○'} ${i}</span>`;
+    }).join('')}</div>
+    <div class="section-label">👨‍🍳 烹饪步骤</div>
+    <div class="steps">${(r.steps||['步骤1','步骤2']).map(s => `<div class="step"><span>${s}</span></div>`).join('')}</div>
+    <div style="display:flex;gap:.8rem;margin-top:1rem;flex-wrap:wrap">
+      <span style="background:var(--gray);padding:.4rem 1rem;border-radius:10px;font-size:.85rem">⏱ ${r.cooking_time||'?'}</span>
+      <span style="background:var(--gray);padding:.4rem 1rem;border-radius:10px;font-size:.85rem">🍽 ${r.servings||'?'}</span>
+      <span style="background:var(--gray);padding:.4rem 1rem;border-radius:10px;font-size:.85rem">👅 ${r.taste||'?'}</span>
+      <span style="background:var(--gray);padding:.4rem 1rem;border-radius:10px;font-size:.85rem">📊 ${r.difficulty||'?'}</span>
+    </div>
+  `;
+  document.getElementById('modal').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('show');
+}
+
+// Gallery
+function initGallery() {
+  const categories = ['全部', ...new Set(RECIPES.map(r => r.category || '其他'))];
+  const filterContainer = document.getElementById('gallery-filters');
+  filterContainer.innerHTML = categories.map(c =>
+    `<span class="gallery-filter ${c === '全部' ? 'active' : ''}" onclick="filterGallery('${c}', this)">${c}</span>`
+  ).join('');
+  renderGallery('全部');
+}
+
+function filterGallery(cat, el) {
+  document.querySelectorAll('.gallery-filter').forEach(f => f.classList.remove('active'));
+  el.classList.add('active');
+  renderGallery(cat);
+}
+
+function renderGallery(cat) {
+  const grid = document.getElementById('gallery-grid');
+  const filtered = cat === '全部' ? RECIPES : RECIPES.filter(r => (r.category || '其他') === cat);
+  grid.innerHTML = filtered.map(r => {
+    const imgUrl = `${BACKEND_URL}/api/v1/recipes/${r.id}/image`;
+    return `<div class="gallery-item" onclick="showDetail('${r.id}')">
+      <img src="${imgUrl}" onerror="this.parentElement.innerHTML='<div class=\'g-emoji\' style=\'height:140px\'>'+'🍳'+'</div><div class=\'g-name\'>'+'${r.name}'+'</div>'" loading="lazy">
+      <div class="g-name">${r.name}</div>
+    </div>`;
+  }).join('');
+}
+
+// Tab 切换
+function switchTab(tab) {
+  document.querySelectorAll('.demo-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.demo-panel').forEach(p => p.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  document.getElementById('panel-' + tab).classList.add('active');
+}
+
+// 初始化
+initIngredients();
+initGallery();
+</script>
+</body>
+</html>
