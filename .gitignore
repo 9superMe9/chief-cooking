@@ -1,0 +1,47 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+backend/.venv
+
+# Node.js
+node_modules/
+frontend/node_modules/
+
+# 敏感配置（含 API Key、密钥等）
+.env
+.env.*
+!.env.example
+frontend/.env
+
+# 上传的图片
+backend/uploads/
+!backend/uploads/.gitkeep
+
+# 数据库文件
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# 日志
+backend/logs/
+*.log
+
+# Markdown 文件（仅保留 README.md）
+*.md
+!README.md
+
+# OS 文件
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.idea/

@@ -1,0 +1,1 @@
+import{a as s,g as a,d as e}from"./request.BnrM5kth.js";const r=()=>a("/recipes"),t=s=>a(`/recipes/${s}`),i=a=>s("/recipes/recommend",a),o=a=>s(`/favorites/${a}`),c=s=>e(`/favorites/${s}`),m=s=>a(`/favorites/${s}/status`),f=()=>a("/favorites"),p=(s=20)=>a(`/recommendations/history?limit=${s}`);export{m as a,c as b,o as c,p as d,f as e,r as f,t as g,i as r};

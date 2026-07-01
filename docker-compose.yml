@@ -1,0 +1,69 @@
+# 饭点小厨生产部署编排：PostgreSQL + Redis + 后端 + Nginx
+# 使用：docker compose up -d
+# 首次启动后执行迁移与种子：docker compose exec backend alembic upgrade head
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: chief_cooking_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-chief}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-chief_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-chief_cooking}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-chief}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: chief_cooking_redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+
+  backend:
+    build: ./backend
+    container_name: chief_cooking_backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      # 覆盖为容器内可访问的 PostgreSQL 地址
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-chief}:${POSTGRES_PASSWORD:-chief_pass}@db:5432/${POSTGRES_DB:-chief_cooking}
+      REDIS_URL: redis://redis:6379/0
+      APP_ENV: production
+      APP_DEBUG: "false"
+    volumes:
+      - ./backend/uploads:/app/uploads
+      - ./backend/logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    expose:
+      - "8000"
+
+  nginx:
+    image: nginx:alpine
+    container_name: chief_cooking_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./deploy/certs:/etc/nginx/certs:ro
+      - ./frontend/dist:/usr/share/nginx/html:ro
+    depends_on:
+      - backend
+
+volumes:
+  pg_data:
+  redis_data:
